@@ -22,7 +22,7 @@ const Inicio = () => {
                     </div>
                 </div>
                 <div className="col-md-6">
-                  <img src="" alt="" />
+                  <img src={ima1} alt="" />
                 </div>
             </div>
         </div>
