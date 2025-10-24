@@ -10,6 +10,8 @@ import Tienda from "./pages/Tienda"
 import Detalle from "./pages/Detalle"
 import Tablets from "./pages/Tablets"
 import Categorias from "./pages/Categorias"
+import Busquedas from "./pages/Busquedas"
+import Tabla from "./pages/Tabla"
 
 
 const App = () => {
@@ -28,6 +30,8 @@ const App = () => {
         <Route path="/tablets" element={<Tablets />} />  
         <Route path="detalle/:id/:title" element={<Detalle />} />
         <Route path="categorias/:cat/:nombre" element={<Categorias />} />
+        <Route path="/busquedas" element={<Busquedas />} />
+        <Route path="/tabla" element={<Tabla />} /> 
         <Route path="*" element={<Inicio />} />
 
       </Routes>

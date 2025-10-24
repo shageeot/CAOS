@@ -1,7 +1,24 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import FiltroCategorias from "./FiltroCategorias"
+import { useState } from "react";
 
 const Header = () => {
+
+    const [txtbuscar, setTxtbuscar] = useState('');
+    const manejoTxt = (e) => {
+        setTxtbuscar(e.target.value);
+        console.log(txtbuscar)
+    };
+
+    const navigate = useNavigate();
+    const manejoEnvio = (event) => {
+        event.preventDefault();
+        navigate('/busquedas', {
+            state: txtbuscar,
+        });
+
+    };
+
     return (
         <nav className="navbar navbar-expand-lg bg-menu">
             <div className="container-fluid">
@@ -26,6 +43,9 @@ const Header = () => {
                          <li className="nav-item">
                             <Link to={'/tienda'} className="nav-link" href="#">Tienda</Link>
                         </li>
+                        <li className="nav-item">
+                            <Link to={'/tabla'} className="nav-link" href="#">Tabla</Link>
+                        </li>
                         <li className="nav-item dropdown">
                             <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Categorias
@@ -35,8 +55,8 @@ const Header = () => {
                             </ul>
                         </li>
                     </ul>
-                    <form className="d-flex" role="search">
-                        <input className="form-control me-2" type="search" placeholder="Search" aria-label="Search" />
+                    <form className="d-flex" role="search" onSubmit={manejoEnvio}>
+                        <input value={txtbuscar} onChange={manejoTxt} className="form-control me-2" type="search" placeholder="Search" aria-label="Search" />
                         <button className="btn btn-outline-success" type="submit">Search</button>
                     </form>
                 </div>
