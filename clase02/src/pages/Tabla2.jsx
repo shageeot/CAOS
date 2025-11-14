@@ -1,0 +1,240 @@
+import { useEffect, useMemo, useState } from "react";
+
+import { Card } from "primereact/card";
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { Rating } from "primereact/rating";
+import { SelectButton } from 'primereact/selectbutton';
+import { formatCurrency, formatNumber } from "../util/funciones";
+import { FilterMatchMode } from 'primereact/api'; // Asegúrate de importar esto
+import { InputText } from 'primereact/inputtext';
+import { IconField } from 'primereact/iconfield';
+import { InputIcon } from 'primereact/inputicon';
+import { Dropdown } from "primereact/dropdown";
+
+const API='https://dummyjson.com/products?limit=300';
+
+const Tabla2 = () => {
+
+  const [datos, setDatos] = useState([]); //datos: Almacena los productos recibidos de la API.
+  const [loading, setLoading] = useState(true); //loading: Indica si la carga está en progreso (para mostrar un spinner).
+  const [error, setError] = useState(null); //error: Guarda el mensaje de error si la petición falla.
+  //filtros
+  const [globalTotals, setGlobalTotals] = useState({});
+  
+    const [filters, setFilters] = useState({
+
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        title: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+        brand: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+        category: { value: null, matchMode: FilterMatchMode.EQUALS }, // Se usa EQUALS para selección de categoría
+        price: { value: null, matchMode: FilterMatchMode.EQUALS },
+    });
+     const [globalFilterValue, setGlobalFilterValue] = useState('');
+   const [products, setProducts] = useState([]);
+   // Tamanos de las tablas
+   const [sizeOptions] = useState([
+        { label: 'Small', value: 'small' },
+        { label: 'Normal', value: 'normal' },
+        { label: 'Large', value: 'large' }
+   ]);
+  const [size, setSize] = useState(sizeOptions[1].value);
+  
+  //ESTADOS
+  // Estado local para almacenar el valor seleccionado en el Dropdown de categoría
+  const [categoryFilter, setCategoryFilter] = useState(null);
+
+
+  const getDatos = async () => {
+        try {
+            const response = await fetch(API);
+            if (!response.ok) {
+                throw new Error("HTTP error! status: " + response.status);
+            }
+            const data = await response.json();
+            setDatos(data.products);
+            setLoading(false);
+        } catch (err) {
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        getDatos();
+    }, []);
+    
+     // EXTRAER Y PREPARAR CATEGORÍAS con useMemo para el Dropdown
+    const categories = useMemo(() => {
+        // Obtenemos categorías únicas y las convertimos al formato { label: 'cat', value: 'cat' }
+        const cats = [...new Set(datos.map(p => p.category))];
+        return cats.sort().map(cat => ({ label: cat.toUpperCase(), value: cat }));
+    }, [datos]);
+
+        // totales para la estadistica
+    // ✅ NUEVO: CÁLCULO DE MÉTRICAS DE INVENTARIO USANDO REDUCE
+    const totales = useMemo(() => {
+        return datos.reduce((acc, product) => ({
+            // Usamos la sintaxis de objeto conciso ({...})
+            totalStock: acc.totalStock + product.stock,
+            totalInventoryValue: acc.totalInventoryValue + (product.price * product.stock),
+        }), {
+            // Inicialización del acumulador (acc)
+            totalStock: 0,
+            totalInventoryValue: 0,
+        });
+    }, [datos]);
+
+    if (loading) {
+        return (
+            <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+                <p>Cargando Personajes...</p>
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="text-center py-5 text-danger">
+                <h4>Error al cargar los Personajes</h4>
+                <p>{error}</p>
+            </div>
+        );
+    }
+    // templates
+    const imageBodyTemplate = (product) => {
+        return <img src={product.thumbnail} alt={product.title} className="img-fluid " width={80} />;
+    };
+    const subtotalTemplate = (product) => {
+        return formatCurrency(product.price * product.stock);
+    };
+    const ratingBodyTemplate = (product) => {
+        return <Rating value={product.rating} readOnly cancel={false} />;
+    };
+    const getSeverity = (stock) => {
+        if (stock > 50) return 'success';    // verde
+        else if (stock > 10 && stock <= 50) return 'warning';  // amarillo
+        else if (stock <= 10) return 'danger';   // rojo
+        return null;
+    };
+    const stockSeverityTemplate = (rowData) => {
+        const severity = getSeverity(rowData.stock);
+        return (
+            <span className={`badge bg-${severity}`}>
+                {rowData.stock}
+            </span>
+        );
+    };
+
+    //funciones 
+      // filtros
+    const onGlobalFilterChange = (e) => {
+        const value = e.target.value;
+        let _filters = { ...filters };
+
+        _filters['global'].value = value;
+
+        setFilters(_filters);
+        setGlobalFilterValue(value);
+    };
+
+    // 2. FUNCIÓN PARA EL FILTRO DE CATEGORÍA
+    const onCategoryFilterChange = (value) => {
+        setCategoryFilter(value); // Actualiza el estado local del Dropdown
+
+        let _filters = { ...filters };
+        // 3. Aplica el valor al filtro de categoría (clave: 'category')
+        _filters['category'].value = value;
+
+        setFilters(_filters); // Actualiza los filtros de la DataTable
+    };
+
+  return (
+    <div className="container">
+         {/* Estadísticas Rápidas */}
+        <div className="row my-4">
+            <div className="col-md-3 mb-3">
+                <div className="card border-0 bg-primary text-white">
+                    <div className="card-body text-center">
+                        <i className="pi pi-box fs-1 "></i>
+                        <h4 className="mt-2">{datos.length}</h4>
+                        <p className="mb-0">Total Productos</p>
+                    </div>
+                </div>
+            </div>
+            <div className="col-md-3 mb-3">
+                <div className="card border-0 bg-success text-white">
+                    <div className="card-body text-center">
+                        <i className="pi pi-chart-line fs-1 "></i>
+                        <h4 className="mt-2">{formatCurrency(totales.totalInventoryValue)}</h4>
+                        <p className="mb-0">Valor Inventario</p>
+                    </div>
+                </div>
+            </div>
+            <div className="col-md-3 mb-3">
+                <div className="card border-0 bg-warning text-white">
+                    <div className="card-body text-center">
+                        <i className="pi pi-shopping-cart fs-1 "></i>
+                        <h4 className="mt-2">{formatNumber(totales.totalStock)}</h4>
+                        <p className="mb-0">Stock Total</p>
+                    </div>
+                </div>
+            </div>
+            <div className="col-md-3 mb-3">
+                <div className="card border-0 bg-info text-white">
+                    <div className="card-body text-center">
+                        <i className="pi pi-tags fs-1 "></i>
+                        <h4 className="mt-2">{categories.length}</h4>
+                        <p className="mb-0">Categorías</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h4 className="text-center py-4">Lista de Productos</h4>
+        <div className="row">
+            <div className="col-md-3">
+                <div className="flex justify-content-center mb-4">
+                    <SelectButton value={size} onChange={(e) => setSize(e.value)} options={sizeOptions} />
+                </div>
+            </div>
+            <div className="col-md-4">
+                <div className="d-flex justify-content-end mb-2">
+                    <IconField iconPosition="left" className='w-100'>
+                        <InputIcon className="pi pi-search" />
+                        <InputText value={globalFilterValue} onChange={onGlobalFilterChange} className='w-100' placeholder="Buscar por nombre, categoria, precio, stock" />
+                    </IconField>
+                </div>
+            </div>
+            <div className='col-md-4'>
+                <Dropdown
+                    value={categoryFilter}
+                    onChange={(e) => onCategoryFilterChange(e.value)}
+                    options={categories}
+                    optionLabel="label"
+                    optionValue="value" // Indicamos que el valor seleccionado es el string de la categoría
+                    placeholder="Filtrar por categoría"
+                    className='w-100'
+                    showClear // Permite borrar la selección
+                />
+            </div>
+        </div>
+        <Card>
+            <DataTable value={datos} filters={filters} size={size} paginator rows={5} rowsPerPageOptions={[5, 10, 25, 50]}>
+                <Column field="id" header="Code" sortable></Column>
+                <Column header="image" body={imageBodyTemplate}></Column>
+                <Column field="title" header="Nombre" sortable></Column>
+                <Column field="category" header="Categoria" filter filterPlaceholder="Categoria" sortable></Column>
+                <Column field="rating" header="Estrellas" body={ratingBodyTemplate} sortable></Column>
+                <Column field="stock" body={stockSeverityTemplate} sortable/>
+                <Column field="stock" header="Stock" sortable></Column>
+                <Column field="price" header="Precio" sortable body={(rowData) => formatCurrency(rowData.price)} className='text-end'></Column>
+                <Column field="price" header="Total" sortable body={subtotalTemplate} className='text-end'></Column>
+            </DataTable>
+        </Card>
+    </div>
+  )
+}
+
+export default Tabla2
